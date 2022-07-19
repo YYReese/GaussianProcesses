@@ -41,6 +41,21 @@ Matern_k <- function(X1,X2,l=1){
   return (Sigma)
 }
 
+##' Squared Exponential kernel 
+##' @param X1 a vector 
+##' @param X2 a vector 
+##' 
+##' @return the covariance matrix of X1 and X2
+SE_k <- function(X1,X2,l=1){
+  Sigma <- matrix(rep(0, length(X1)*length(X2)), nrow=length(X1))
+  for (i in 1:nrow(Sigma)) {
+    for (j in 1:ncol(Sigma)) {
+      r <- abs(X1[i]-X2[j])
+      Sigma[i,j] <- exp(-1/2*(r/l)^2)
+    }
+  }
+  return (Sigma)
+}
 
 ##' Exponential kernel 
 ##' @param X1 a vector 
@@ -82,6 +97,25 @@ criterion_2 <- function(Sigma,sigma2_noise=0){
   return (which.max(int_var))
 }
 
+##' Criterion 3--Dawid-Sebastiani (IMDS = Integrated mean D-S)
+##' Choosing the next point at which the overall
+##'  expected Dawid-Sebastiani score is minimised
+##'
+##' @param Sigma the covariance matrix
+##' @param sigma2_noise variance of observation noise
+##'
+##' @return the index of the next point to be chosen
+criterion_DS <- function(Sigma,sigma2_noise=0){
+  # Try to handle the zero noise case:
+  sigma2_noise <- max(1e-6, sigma2_noise)
+  Var <- diag(Sigma)
+  ok <- is.finite(Var)
+  ok[ok] <- Var[ok] > 0
+  n <- sum(ok)
+  V <- matrix(Var[ok], n, n)
+  int_ds <- colSums(log(V - Sigma[ok, ok]^2 / (t(V) + sigma2_noise)))
+  return (which(ok)[which.min(int_ds)])
+}
 
 
 

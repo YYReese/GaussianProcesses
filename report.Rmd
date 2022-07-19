@@ -255,7 +255,7 @@ plt_pred(seq_DoE(x,y,c(100),criterion_1,sigma2_noise = 0.1^2))
 
 
 
-## Discussions on the two criteria
+## Discussions 
 
 In this part, we discuss the performance of the model under two criteria. 
 
@@ -270,10 +270,10 @@ table1 <- readRDS(file = "data/table1.rds")
 ```{r,echo=FALSE}
 
 ggplot(table1) +
-  geom_line(aes(x=max_iterations, y=variances_1, col="Variances (criterion 1)")) +
-  geom_line(aes(x=max_iterations, y=variances_2, col="Variances (criterion 2)")) +
-  geom_line(aes(x=max_iterations, y=time_cost_1, col="Time cost (criterion 1)")) +
-  geom_line(aes(x=max_iterations, y=time_cost_2, col="Time cost (criterion 2)")) +
+  geom_line(aes(x=max_iterations, y=variances_1, col="Variances (MMSE)")) +
+  geom_line(aes(x=max_iterations, y=variances_2, col="Variances (IMSE)")) +
+  geom_line(aes(x=max_iterations, y=time_cost_1, col="Time cost (MMSE)")) +
+  geom_line(aes(x=max_iterations, y=time_cost_2, col="Time cost (IMSE)")) +
   xlab("iterations") +
   ylab("Variances/Time cost")
 ```
@@ -283,6 +283,9 @@ We can see from the above figure that when the max iteration is small, criterion
 To see how the two criteria reduce the prediction variance by sequentially getting new observations, the plots of the prediction variance after each update are presented here. The integers in grey boxes indicate the iteration state.
 ```{r,echo=FALSE}
 var_dat1 <- readRDS(file = "data/var_dat1.rds")
+var_dat1$iterations <- factor(var_dat1$iterations,level=1:10)
+```
+```{r,echo=FALSE}
 var_dat1 %>%
   ggplot() +
   geom_line(aes(x,var)) +
@@ -294,6 +297,9 @@ var_dat1 %>%
 
 ```{r, echo=FALSE}
 var_dat2 <- readRDS(file = "data/var_dat2.rds")
+var_dat2$iterations <- factor(var_dat2$iterations,level=1:10)
+```
+```{r,echo=FALSE}
 var_dat2 %>%
   ggplot() +
   geom_line(aes(x,var)) +
@@ -310,8 +316,11 @@ On the contrary, IMSE aims to reduce the overall variance, "the area under the c
 This motivates us to investigate the case where we force the two endpoints to be observed. 
 Choosing the initial design to be at the two endpoints, we are interested in how differently the two criteria make their decisions. 
 
+
 ```{r, echo=FALSE}
-var_dat3 %>%
+var_dat3 <- readRDS(file = "data/var_dat3.rds")
+var_dat3$iterations <- factor(var_dat3$iterations, levels=1:10)
+var_dat3 %>% 
   ggplot() +
   geom_line(aes(x,var)) +
   xlab("x") +
@@ -321,12 +330,14 @@ var_dat3 %>%
 ```
 
 ```{r, echo=FALSE}
+var_dat4 <- readRDS(file = "data/var_dat4.rds")
+var_dat4$iterations <- factor(var_dat4$iterations, levels=1:10)
 var_dat4 %>%
   ggplot() +
   geom_line(aes(x,var)) +
   xlab("x") +
   ylab("variance") +
-  ggtitle("Prediction variance plot (IMSE") +
+  ggtitle("Prediction variance plot (IMSE)") +
   facet_grid(rows = vars(iterations),scales = "free_y")
 ```
 
@@ -336,9 +347,23 @@ table2 <- readRDS(file = "data/table2.rds")
 
 knitr::kable(table2)
 ```
+```{r}
+var_datDS$iterations <- factor(var_datDS$iterations, levels=1:10)
+
+
+ggplot() +
+  geom_line(aes(x,var, col = "(MMSE)"), data = var_dat1) +
+  geom_line(aes(x,var, col = "(IMSE)"), data = var_dat2) +
+  geom_line(aes(x,var, col = "(IMDS)"), data = var_datDS) +
+  xlab("x") +
+  ylab("variance") +
+  ggtitle("Prediction variance plot") +
+  facet_grid(rows = vars(iterations),scales = "free_y")
+```
 
 
 ## Space-filling design vs sequential design
+
 
 To see how sequential design benefits the computer experiments, we compare the results of space-filling strategy with that of the sequential strategy given the number of observations fixed to 20.
 
@@ -402,12 +427,12 @@ for (i in 1:length(space_filling)){
 ```{r}
 seq <- as.data.frame(seq)
 colnames(seq) <- c("max_criterion","int_criterion")
-ggplot(data=seq) +
+ggplot(seq) +
   geom_line(aes(x=1:20,y=max_criterion,col="max_criterion")) +
   geom_line(aes(x=1:20,y=int_criterion,col="int_criterion")) +
   geom_hline(yintercept = dx*sum(sf$var),linetype="dashed") +
-  ylab("Variance integral") +
-  xlab("Number of initial (space-filling) designs")
+  ylab("Overall variance") +
+  xlab("Number of initial observations from uniform space-filling designs")
 ```
 The horizontal dash line indicates the variance integral given by 20 space-filling designs. This figure shows that if we start with 11 or less initial space-filling designs and sequentially choose the follow-up designs to make 20 observations in total, the variance integral will be greater than that given by purely space-filling designs. If the number of initial space-filling points is between 11 to 19, three methods give roughly the same total variances. If we make 19 initial space-filling designs and sequentially choose the last point, the total variances are less than that the purely sequential designs give. This proves that the sequential design strategies perform better than space-filling strategy in global fitting. 
 
@@ -418,32 +443,49 @@ y2 <- g(x)
 ```
 ```{r}
 initial_design <- c(250,750)
-f_km <- seq_DoE(x,y1,initial_design, criterion_1,Matern_k)
+f_km_c1 <- seq_DoE(x,y1,initial_design, criterion_1,Matern_k) # Mat Mat c1
 
-f_ke <- seq_DoE(x,y1,initial_design, criterion_2,Exp_k)
+f_ke_c1 <- seq_DoE(x,y1,initial_design, criterion_1,Exp_k) # Mat Exp c1
 
-g_km <- seq_DoE(x,y2,initial_design, criterion_1,Matern_k)
+f_km_c2 <- seq_DoE(x,y1,initial_design, criterion_2,Matern_k) # Mat Mat c2
 
-g_ke <- seq_DoE(x,y2,initial_design, criterion_2,Exp_k)
+f_ke_c2 <- seq_DoE(x,y1,initial_design, criterion_2,Exp_k) # Mat Exp c2
+
+f_km_c3 <- seq_DoE(x,y1,initial_design, criterion_DS,Matern_k) # Mat Mat c3
+
+f_ke_c3 <- seq_DoE(x,y1,initial_design, criterion_DS,Exp_k) # Mat Exp c3
+
+g_km_c1 <- seq_DoE(x,y2,initial_design, criterion_1,Matern_k) #Exp Mat c1
+
+g_ke_c1 <- seq_DoE(x,y2,initial_design, criterion_1,Exp_k) # Exp Exp c1
+
+g_km_c2 <- seq_DoE(x,y2,initial_design, criterion_2,Matern_k) #Exp Mat c2
+
+g_ke_c2 <- seq_DoE(x,y2,initial_design, criterion_2,Exp_k) # Exp Exp c2
+
+g_km_c3 <- seq_DoE(x,y2,initial_design, criterion_DS,Matern_k) #Exp Mat c3
+ 
+g_ke_c3 <- seq_DoE(x,y2,initial_design, criterion_DS,Exp_k) # Exp Exp c3
 
 ```
 ```{r,echo=FALSE}
-ggplot(f_km)+
+ggplot(f_km_c2)+
   geom_ribbon(aes(x = x, ymin = y_hat-1.97*sqrt(var), ymax = y_hat+1.97*sqrt(var)),
               alpha = 0.2) +
   geom_line(aes(x = x, y = y_hat), linetype = "dashed") +
-  geom_point(data = data.frame(x=x[f_km$obs],y=y1[f_km$obs]),
+  geom_point(data = data.frame(x=x[f_km_c2$obs],y=y1[f_km_c2$obs]),
              aes(x = x, y = y),size = 2) +
   theme_bw() +
   geom_line(aes(x=x,y=y), colour= "red")+
   ggtitle("Fitted GP model (matern_kernel) for f")
 ```
+
 ```{r,echo=FALSE}
-ggplot(f_ke)+
+ggplot(f_ke_c2)+
   geom_ribbon(aes(x = x, ymin = y_hat-1.97*sqrt(var), ymax = y_hat+1.97*sqrt(var)),
               alpha = 0.2) +
   geom_line(aes(x = x, y = y_hat), linetype = "dashed") +
-  geom_point(data = data.frame(x=x[f_ke$obs],y=y1[f_ke$obs]),
+  geom_point(data = data.frame(x=x[f_ke_2$obs],y=y1[f_ke_c2$obs]),
              aes(x = x, y = y),size = 2) +
   theme_bw() +
   geom_line(aes(x=x,y=y), colour= "red")+
@@ -451,31 +493,33 @@ ggplot(f_ke)+
 ```
 
 ```{r,echo=FALSE}
-ggplot(g_km)+
+ggplot(g_km_c2)+
   geom_ribbon(aes(x = x, ymin = y_hat-1.97*sqrt(var), ymax = y_hat+1.97*sqrt(var)),
               alpha = 0.2) +
   geom_line(aes(x = x, y = y_hat), linetype = "dashed") +
-  geom_point(data = data.frame(x=x[g_km$obs],y=y2[g_km$obs]),
+  geom_point(data = data.frame(x=x[g_km_c2$obs],y=y2[g_km_c2$obs]),
              aes(x = x, y = y),size = 2) +
   theme_bw() +
   geom_line(aes(x=x,y=y), colour= "red")+
   ggtitle("Fitted GP model (matern_kernel) for g")
 ```
 ```{r,echo=FALSE}
-ggplot(g_ke)+
+ggplot(g_ke_c2)+
   geom_ribbon(aes(x = x, ymin = y_hat-1.97*sqrt(var), ymax = y_hat+1.97*sqrt(var)),
               alpha = 0.2) +
   geom_line(aes(x = x, y = y_hat), linetype = "dashed") +
-  geom_point(data = data.frame(x=x[g_ke$obs],y=y2[g_ke$obs]),
+  geom_point(data = data.frame(x=x[g_ke_c2$obs],y=y2[g_ke_c2$obs]),
              aes(x = x, y = y),size = 2) +
   theme_bw() +
   geom_line(aes(x=x,y=y), colour= "red")+
   ggtitle("Fitted GP model (exp_kernel) for g")
 ```
+
+
 Recall that $f$ is constructed by Matern kernel and $g$ is constructed by Exponential kernel. We apply our model with Exponential and Matern kernels respectively on $f$ and $g$. This table summarize the residual sum of squares (RSS) of the four combinations. For function $f$, the model using Matern kernel lead to a lower RSS. For function $g$, using Exponential kernel results in a lower RSS. We see that a kernel that matches the target function will make the surrogate model more desirable. Hence in practice we should make use of the prior knowledge as much as possible to choose a proper kernel to make the model more reliable. This becomes the main challenge, choosing a proper covariance function. In practice, we often have a guess about the graphical features of the target function. If the function tends to be rough, for example some signal functions in electronic engineering field, then one can choose exponential kernel or Matern kernel with small $\nu$. For smooth functions, the square exponential kernel may be applied. 
 ```{r,echo=FALSE}
-fg_data <- data.frame(f=c(sum((f_ke$y_hat-y1)^2)*dx,sum((f_km$y_hat-y1)^2)*dx),
-           g=c(sum((g_ke$y_hat-y2)^2)*dx,sum((g_km$y_hat-y2)^2)*dx))
+fg_data <- data.frame(f=c(sum((f_ke_c2$y_hat-y1)^2)*dx,sum((f_km_c2$y_hat-y1)^2)*dx),
+           g=c(sum((g_ke_c2$y_hat-y2)^2)*dx,sum((g_km_c2$y_hat-y2)^2)*dx))
 
 rownames(fg_data) <- c("Exp_kernel","Mat_kernel")
 
@@ -483,8 +527,69 @@ knitr::kable(fg_data)
 ```
 
 
+```{r,echo=FALSE}
+c_data <- data.frame(f_Exp=c(sum((f_ke_c1$y_hat-y1)^2)*dx,
+                             sum((f_ke_c2$y_hat-y1)^2)*dx,
+                             sum((f_ke_c3$y_hat-y1)^2)*dx),
+                     f_Mat=c(sum((f_km_c1$y_hat-y1)^2)*dx,
+                             sum((f_km_c2$y_hat-y1)^2)*dx,
+                             sum((f_km_c3$y_hat-y1)^2)*dx),
+                     g_Exp=c(sum((g_ke_c1$y_hat-y2)^2)*dx,
+                             sum((g_ke_c2$y_hat-y2)^2)*dx,
+                             sum((g_ke_c3$y_hat-y2)^2)*dx),
+                     g_Mat=c(sum((g_km_c1$y_hat-y2)^2)*dx,
+                             sum((g_km_c2$y_hat-y2)^2)*dx,
+                             sum((g_km_c3$y_hat-y2)^2)*dx))
 
+rownames(c_data) <- c("MMSE","IMSE","IMDS")
 
+knitr::kable(c_data)
+```
+```{r}
+ggplot(g_km_c2)+
+  geom_ribbon(aes(x = x, ymin = y_hat-1.97*sqrt(var), ymax = y_hat+1.97*sqrt(var)),
+              alpha = 0.2) +
+  geom_line(aes(x = x, y = y_hat), linetype = "dashed") +
+  geom_point(data = data.frame(x=x[g_km_c2$obs],y=y2[g_km_c2$obs]),
+             aes(x = x, y = y),size = 2) +
+  theme_bw() +
+  geom_line(aes(x=x,y=y), colour= "red")+
+  ggtitle("Fitted GP model (exp_kernel) for g")
+```
+```{r}
+ggplot(g_km_c3)+
+  geom_ribbon(aes(x = x, ymin = y_hat-1.97*sqrt(var), ymax = y_hat+1.97*sqrt(var)),
+              alpha = 0.2) +
+  geom_line(aes(x = x, y = y_hat), linetype = "dashed") +
+  geom_point(data = data.frame(x=x[g_ke_c2$obs],y=y2[g_ke_c2$obs]),
+             aes(x = x, y = y),size = 2) +
+  theme_bw() +
+  geom_line(aes(x=x,y=y), colour= "red")+
+  ggtitle("Fitted GP model (exp_kernel) for g")
+```
+```{r}
+ggplot(f_ke_c2)+
+  geom_ribbon(aes(x = x, ymin = y_hat-1.97*sqrt(var), ymax = y_hat+1.97*sqrt(var)),
+              alpha = 0.2) +
+  geom_line(aes(x = x, y = y_hat), linetype = "dashed") +
+  geom_point(data = data.frame(x=x[f_ke_c2$obs],y=y1[f_ke_c2$obs]),
+             aes(x = x, y = y),size = 2) +
+  theme_bw() +
+  geom_line(aes(x=x,y=y), colour= "red")+
+  ggtitle("Fitted GP model (exp_kernel) for g")
+```
+
+```{r}
+ggplot(f_ke_c3)+
+  geom_ribbon(aes(x = x, ymin = y_hat-1.97*sqrt(var), ymax = y_hat+1.97*sqrt(var)),
+              alpha = 0.2) +
+  geom_line(aes(x = x, y = y_hat), linetype = "dashed") +
+  geom_point(data = data.frame(x=x[f_ke_c3$obs],y=y1[f_ke_c3$obs]),
+             aes(x = x, y = y),size = 2) +
+  theme_bw() +
+  geom_line(aes(x=x,y=y), colour= "red")+
+  ggtitle("Fitted GP model (exp_kernel) for g")
+```
 
 
 # Code appendix

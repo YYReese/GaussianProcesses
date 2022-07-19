@@ -6,7 +6,7 @@ source("functions.R")
 set.seed(12345L)
 
 ##############################initializations##################################
-x <- seq(-5,5,len=1000)
+x <- seq(-10,10,len=1000)
 dx <- (x[length(x)]-x[1])/length(x)
 y <- f(x)
 y_hat <- rep(NA, length(x))
@@ -136,40 +136,29 @@ saveRDS(data, file = "data/table4.rds")
 initial_design <- c(100)
 var_dat1 <- data.frame(x=x)
 var_dat2 <- data.frame(x=x)
+var_datDS <- data.frame(x=x)
 for (i in 1:10){
   df1 <- seq_DoE(x,y,initial_design,criterion_1,sigma2_noise=0.1^2, max_iterations = i)
   var_dat1 <- cbind(var_dat1, df1$var)
 
-  df2 <-seq_DoE(x,y,initial_design,criterion_2,sigma2_noise=0.1^2,max_iterations = i)
+  df2 <- seq_DoE(x,y,initial_design,criterion_2,sigma2_noise=0.1^2,max_iterations = i)
   var_dat2 <- cbind(var_dat2, df2$var)
+  
+  df3 <- seq_DoE(x,y,initial_design,criterion_DS,sigma2_noise=0.1^2,max_iterations = i)
+  var_datDS <- cbind(var_datDS, df3$var)
   
 }
 colnames(var_dat1) <- c("x",1:10)
 var_dat1 <- pivot_longer(var_dat1, cols = 2:11, names_to="iterations",values_to='var')
 colnames(var_dat2) <- c("x",1:10)
 var_dat2 <- pivot_longer(var_dat2, cols = 2:11 ,names_to="iterations",values_to='var')
-
-
-var_dat1 %>%
-  ggplot() +
-  geom_line(aes(x,var)) +
-  xlab("x") +
-  ylab("variance") +
-  ggtitle("Prediction variance plot (MMSE)") +
-  facet_grid(rows = vars(iterations),scales = "free_y")
-
-var_dat2 %>%
-  ggplot() +
-  geom_line(aes(x,var)) +
-  xlab("x") +
-  ylab("variance") +
-  ggtitle("Prediction variance plot (IMSE") +
-  facet_grid(rows = vars(iterations),scales = "free_y")
+colnames(var_datDS) <- c("x",1:10)
+var_datDS <- pivot_longer(var_datDS, cols = 2:11, names_to="iterations",values_to='var')
 
 
 saveRDS(var_dat1, file = "data/var_dat1.rds")
 saveRDS(var_dat2, file = "data/var_dat2.rds")
-
+saveRDS(var_datDS, file = "data/var_datDS.rds")
 
 
 
