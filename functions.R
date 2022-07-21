@@ -80,7 +80,7 @@ Exp_k <- function(X1,X2,l=1){
 ##' @param sigma2_noise variance of observation noise
 ##' 
 ##' @return the index of the next point to be chosen
-criterion_1 <- function(Sigma,sigma2_noise=0){
+criterion_MMSE <- function(Sigma,sigma2_noise=0){
   return (which.max(diag(Sigma)))
 }
 
@@ -92,7 +92,7 @@ criterion_1 <- function(Sigma,sigma2_noise=0){
 ##' @param sigma2_noise variance of observation noise
 ##' 
 ##' @return the index of the next point to be chosen
-criterion_2 <- function(Sigma,sigma2_noise=0){
+criterion_IMSE <- function(Sigma,sigma2_noise=0){
   int_var <- rowSums(Sigma^2)/(diag(Sigma) + sigma2_noise)
   return (which.max(int_var))
 }
@@ -105,7 +105,7 @@ criterion_2 <- function(Sigma,sigma2_noise=0){
 ##' @param sigma2_noise variance of observation noise
 ##'
 ##' @return the index of the next point to be chosen
-criterion_DS <- function(Sigma,sigma2_noise=0){
+criterion_IMDS <- function(Sigma,sigma2_noise=0){
   # Try to handle the zero noise case:
   sigma2_noise <- max(1e-6, sigma2_noise)
   Var <- diag(Sigma)
@@ -116,7 +116,15 @@ criterion_DS <- function(Sigma,sigma2_noise=0){
   int_ds <- colSums(log(V - Sigma[ok, ok]^2 / (t(V) + sigma2_noise)))
   return (which(ok)[which.min(int_ds)])
 }
-
+criterion_0 <- function(Sigma,sigma2_noise=0){
+  # Try to handle the zero noise case:
+  sigma2_noise <- max(1e-6, sigma2_noise)
+  Var <- diag(Sigma)
+  ok <- is.finite(Var)
+  ok[ok] <- Var[ok] > 0
+  pred_v <- Var[ok] - colSums(Sigma[ok, ok]^2) / (Var[ok] + sigma2_noise)
+  return (which(ok)[which.min(pred_v)])
+}
 
 
 #' Compute an observation update
@@ -242,8 +250,13 @@ seq_DoE <- function(x,y,initial_design, criterion,
     obs <- obs | obs_new
     
   }
-  data.frame(x=x, y=y, y_hat=y_hat, var=pmax(0,diag(Sigma)), obs=obs)
+  # Calculate proper scores
+  #se <- SE_score(y_pred=y_hat,y_true=y)
+  #ds <- DS_score(y_pred=y_hat,y_true=y,sigma2=pmax(0,diag(Sigma)))
   
+  #Return data frame
+  data.frame(x=x, y=y, obs=obs, 
+             y_hat=y_hat, var=pmax(0,diag(Sigma)))
 }
 
 ##' Plot prediction
@@ -278,6 +291,28 @@ plt_var <- function(var){
     ggtitle("Prediction variance")
 }
 
+
+##' Calculate SE scores for each x
+##' 
+##' @param y_pred vector of prediction values (\mu(x) in the case)
+##' @param y_true vector of actual values (y(x))
+##' 
+##' @return vector of SE scores
+SE_score <- function(y_pred, y_true){
+  (y_true-y_pred)^2
+}
+
+##' Calculate DS scores for each x
+##' 
+##' @param y_pred vector of prediction values (\mu(x) in the case)
+##' @param y_true vector of actual values (y(x))
+##' @param sigma2 vector of the prediction varainces
+##' 
+##' @return vector of DS scores
+DS_score <- function(y_pred, y_true,sigma2){
+  ds<- (y_true-y_pred)^2/sigma2+log(sigma2)
+  ds
+}
 
 
 

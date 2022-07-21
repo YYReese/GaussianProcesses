@@ -255,17 +255,57 @@ plt_pred(seq_DoE(x,y,c(100),criterion_1,sigma2_noise = 0.1^2))
 
 
 
-## Discussions 
+## Model assessment
 
-In this part, we discuss the performance of the model under two criteria. 
+In this part, we discuss the performance of the model under three criteria. 
 
-First, let the initial design to be the same, a randomly chosen point. We are going to investigate which criterion will give less uncertainty given the same iterations.
+First, let the initial design to be -4. We are going to investigate which criterion will give less SE and DS scores. 
 
-This is the plot of the total variance (computed by variance integral) and time cost of the two methods. The x axis is the total iterations performed.
-
-```{r, echo=FALSE}
+```{r,echo=FALSE}
 table1 <- readRDS(file = "data/table1.rds")
 ```
+
+
+This is the plot of the averaged of SE scores of three models.
+```{r,echo=FALSE}
+ggplot(table1)+
+  geom_line(aes(x=max_iterations, y=SE_MMSE, col="SE (MMSE)")) +
+  geom_line(aes(x=max_iterations, y=SE_IMSE, col="SE (IMSE)")) +
+  geom_line(aes(x=max_iterations, y=SE_IMDS, col="SE (IMDS)")) +
+  xlab("Number of observations") +
+  ylab("Averaged SE scores") +
+  theme_bw() 
+```
+
+In general, averaged SE scores decreases as observations increases. We can see that IMSE gives the least averaged SE score while IMSE gives the largest. However, as the number of observations increases, the differences decreases.Notice that after 20 observations, the differences of the averaged SE between the three has already been negligible. It can therefore be inferred that the difference of the total variance will converge as max iteration goes up.
+
+
+
+The plot of the averaged DS scores.
+```{r,echo=FALSE}
+ggplot(table1)+
+  geom_line(aes(x=max_iterations, y=DS_MMSE, col="DS (MMSE)")) +
+  geom_line(aes(x=max_iterations, y=DS_IMSE, col="DS (IMSE)")) +
+  geom_line(aes(x=max_iterations, y=DS_IMDS, col="DS (IMDS)")) +
+  xlab("Number of observations") +
+  ylab("Averaged DS scores") +
+  theme_bw() 
+```
+As for the averaged DS scores, 
+
+
+The plot of time cost
+```{r,echo=FALSE}
+ggplot(table1)+
+  geom_line(aes(x=max_iterations, y=time_cost_MMSE, col="Time cost (MMSE)")) +
+  geom_line(aes(x=max_iterations, y=time_cost_IMSE, col="Time cost (IMSE)")) +
+  geom_line(aes(x=max_iterations, y=time_cost_IMDS, col="Time cost (IMDS)")) +
+  xlab("Iterations") +
+  ylab("Time cost") +
+  theme_bw() 
+```
+
+
 
 ```{r,echo=FALSE}
 

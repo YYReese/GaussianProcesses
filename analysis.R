@@ -23,38 +23,44 @@ save(x,dx,y,y_hat,mu,mu_new,Sigma,Sigma_new, file="initializations.RData")
 
 ##############################table 1#################################################
 initial_design <- sample.int(length(x),1)
-iterations <- c(3, 5, 10, 20, 30, 40, 50)
+iterations <- c(3, 5, 10, 15, 20, 25, 30, 35,40,45, 50)
 
 
-data <- matrix(NA,length(iterations),5)
+data <- matrix(NA,length(iterations),10)
 data[,1] <- iterations
 for (i in  1:length(iterations)){
   t0 <- Sys.time()
   c1 <- seq_DoE(x=x,initial_design=initial_design, y=y,
-                criterion=criterion_1, max_iterations=iterations[i])
-  data[i,4] <- Sys.time()-t0
-  data[i,2] <- sum(c1$var)
+                criterion=criterion_MMSE, max_iterations=iterations[i])
+  data[i,8] <- Sys.time()-t0
+  data[i,2] <- mean(SE_score(y_pred=c1$y_hat,y_true=c1$y),na.rm=TRUE)
+  data[i,5] <- mean(DS_score(y_pred=c1$y_hat,y_true=c1$y,sigma2=c1$var),na.rm=TRUE)
   
   t0 <- Sys.time()
   c2 <- seq_DoE(x=x,initial_design=initial_design, y=y,
-                criterion=criterion_2, max_iterations=iterations[i])
-  data[i,5] <- Sys.time()-t0
-  data[i,3] <- sum(c2$var)
+                criterion=criterion_IMSE, max_iterations=iterations[i])
+  data[i,9] <- Sys.time()-t0
+  data[i,3] <- mean(SE_score(y_pred=c2$y_hat,y_true=c2$y),na.rm=TRUE)
+  data[i,6] <- mean(DS_score(y_pred=c2$y_hat,y_true=c2$y,sigma2=c2$var),na.rm=TRUE)
+  
+  t0 <- Sys.time()
+  c3 <- seq_DoE(x=x,initial_design=initial_design,y=y,
+                criterion=criterion_IMDS, max_iterations=iterations[i])
+  data[i,10] <- Sys.time()-t0
+  data[i,4] <- mean(SE_score(y_pred=c3$y_hat,y_true=c3$y),na.rm=TRUE)
+  data[i,7] <- mean(DS_score(y_pred=c3$y_hat,y_true=c3$y,sigma2=c3$var),na.rm=TRUE)
 }
 
 data <- data.frame(max_iterations=data[,1],
-                   variances_1=dx*data[,2],
-                   variances_2=dx*data[,3],
-                   time_cost_1=data[,4],
-                   time_cost_2=data[,5])
-
-ggplot(data) +
-  geom_line(aes(x=max_iterations, y=variances_1, col="Variances (criterion 1)")) +
-  geom_line(aes(x=max_iterations, y=variances_2, col="Variances (criterion 2)")) +
-  geom_line(aes(x=max_iterations, y=time_cost_1, col="Time cost (criterion 1)")) +
-  geom_line(aes(x=max_iterations, y=time_cost_2, col="Time cost (criterion 2)")) +
-  xlab("iterations") +
-  ylab("Variances/Time cost")
+                   SE_MMSE=data[,2],
+                   SE_IMSE=data[,3],
+                   SE_IMDS=data[,4],
+                   DS_MMSE=data[,5],
+                   DS_IMSE=data[,6],
+                   DS_IMDS=data[,7],
+                   time_cost_MMSE=data[,8],
+                   time_cost_IMSE=data[,9],
+                   time_cost_IMDS=data[,10])
 
 saveRDS(data, file = "data/table1.rds")
 
